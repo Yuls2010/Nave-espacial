@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🚀 Meteorito Destroyer 2D</title>
+<style>
+  :root{
+    --azul:#1a2a4a; --turquesa:#4ecdc4; --amarillo:#ffd93d;
+    --coral:#ff6b6b; --blanco:#f8f9fa;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#02040a;
+    font-family:'Segoe UI',Tahoma,sans-serif;color:var(--blanco);user-select:none;}
+  #game{display:block;position:fixed;inset:0;touch-action:none;}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;
+    display:flex;justify-content:space-between;align-items:flex-start;
+    pointer-events:none;z-index:5;}
+  .hud-box{background:rgba(8,16,32,.72);border:1px solid rgba(78,205,196,.35);
+    border-radius:10px;padding:8px 14px;box-shadow:0 0 18px rgba(78,205,196,.12);}
+  .hud-label{font-size:9px;letter-spacing:2px;color:var(--turquesa);}
+  .hud-value{font-family:Consolas,monospace;font-size:22px;font-weight:700;}
+  #hud-right{display:flex;gap:8px;pointer-events:auto;}
+  .icon-btn{background:rgba(8,16,32,.8);border:1px solid rgba(78,205,196,.4);
+    color:#fff;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:15px;
+    transition:.2s;}
+  .icon-btn:hover{background:rgba(78,205,196,.25);transform:translateY(-2px);}
+
+  /* ---------- PANTALLAS ---------- */
+  .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:24px;
+    background:radial-gradient(ellipse at center,rgba(10,22,48,.88),rgba(0,0,0,.96));}
+  .screen.hidden{display:none;}
+  h1{font-size:clamp(34px,7vw,64px);letter-spacing:5px;font-weight:900;
+    background:linear-gradient(135deg,var(--amarillo),var(--coral));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:8px;}
+  .sub{color:var(--turquesa);letter-spacing:4px;font-size:12px;margin-bottom:26px;}
+  .panel{background:rgba(10,20,40,.7);border:1px solid rgba(78,205,196,.3);
+    border-radius:14px;padding:20px 26px;margin-bottom:26px;max-width:440px;
+    line-height:1.9;font-size:13px;color:#cfe0f5;}
+  .key{display:inline-block;background:rgba(78,205,196,.15);
+    border:1px solid var(--turquesa);border-radius:5px;padding:1px 8px;
+    margin:0 2px;color:#fff;font-family:Consolas,monospace;}
+  .btn{padding:14px 36px;font-size:15px;font-weight:700;letter-spacing:2px;
+    border:2px solid var(--turquesa);border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#2a5a7a,#1a3a5a);color:#fff;
+    transition:.2s;margin:6px;text-transform:uppercase;}
+  .btn:hover{transform:translateY(-3px);box-shadow:0 0 25px rgba(78,205,196,.4);}
+  .btn.primary{background:linear-gradient(135deg,var(--turquesa),#2a9a92);color:#081420;}
+  .btn.danger{border-color:var(--coral);background:linear-gradient(135deg,#7a2a3a,#4a1a2a);}
+  #over-title{color:var(--coral);-webkit-text-fill-color:var(--coral);
+    background:none;text-shadow:0 0 30px rgba(255,107,107,.6);animation:shake .5s;}
+  @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .stats{font-size:15px;color:#cfe0f5;margin:6px 0;}
+  .stats b{color:var(--amarillo);font-size:22px;font-family:Consolas,monospace;}
+
+  /* ---------- CONTROLES MÓVILES ---------- */
+  #touch{position:fixed;bottom:16px;left:0;right:0;display:none;
+    justify-content:space-between;padding:0 18px;z-index:8;pointer-events:none;}
+  .dpad{display:grid;grid-template-columns:repeat(3,52px);
+    grid-template-rows:repeat(3,52px);gap:4px;pointer-events:auto;}
+  .tbtn{background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.5);
+    border-radius:10px;color:#fff;font-size:22px;touch-action:none;}
+  .tbtn:active{background:rgba(78,205,196,.45);}
+  #fire-btn{width:88px;height:88px;border-radius:50%;align-self:flex-end;
+    background:rgba(255,107,107,.2);border:2px solid var(--coral);
+    font-size:13px;font-weight:700;pointer-events:auto;touch-action:none;}
+  @media(pointer:coarse){#touch{display:flex;}}
+  @media(max-height:560px){.panel{display:none;}h1{font-size:36px;}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div style="display:flex;gap:10px;">
+    <div class="hud-box"><div class="hud-label">PUNTOS</div><div class="hud-value" id="score">0</div></div>
+    <div class="hud-box"><div class="hud-label">RÉCORD</div><div class="hud-value" id="best">0</div></div>
+    <div class="hud-box"><div class="hud-label">BAJAS</div><div class="hud-value" id="kills">0</div></div>
+  </div>
+  <div id="hud-right">
+    <button class="icon-btn" id="sound-btn" title="Sonido">🔊</button>
+    <button class="icon-btn" id="pause-btn" title="Pausa (P)">⏸</button>
+  </div>
+</div>
+
+<div id="touch">
+  <div class="dpad">
+    <button class="tbtn" data-k="ArrowUp" style="grid-area:1/2">▲</button>
+    <button class="tbtn" data-k="ArrowLeft" style="grid-area:2/1">◀️</button>
+    <button class="tbtn" data-k="ArrowRight" style="grid-area:2/3">▶️</button>
+    <button class="tbtn" data-k="ArrowDown" style="grid-area:3/2">▼</button>
+  </div>
+  <button class="tbtn" id="fire-btn">🚀<br>FUEGO</button>
+</div>
+
+<div id="start-screen" class="screen">
+  <h1>🚀 METEORITO DESTROYER</h1>
+  <div class="sub">DEFIENDE LA GALAXIA · EDICIÓN 2D</div>
+  <div class="panel">
+    <span class="key">←</span><span class="key">→</span> Mover lateral ·
+    <span class="key">↑</span><span class="key">↓</span> Avanzar / retroceder<br>
+    <span class="key">ESPACIO</span> Disparar misiles ·
+    <span class="key">P</span> Pausa<br><br>
+    ☄️ Destruye los meteoritos antes de que impacten.<br>
+    💥 Un impacto en tu nave = <b style="color:var(--coral)">GAME OVER</b><br>
+    🎯 Meteorito grande = más puntos
+  </div>
+  <button class="btn primary" id="start-btn">▶️ Iniciar misión</button>
+</div>
+
+<div id="pause-screen" class="screen hidden">
+  <h1 style="-webkit-text-fill-color:var(--turquesa)">⏸ PAUSA</h1>
+  <div class="sub">MISIÓN EN ESPERA</div>
+  <button class="btn primary" id="resume-btn">▶️ Continuar</button>
+  <button class="btn" id="pause-menu-btn">🏠 Menú</button>
+</div>
+
+<div id="over-screen" class="screen hidden">
+  <h1 id="over-title">GAME OVER</h1>
+  <div class="sub">TU NAVE HA SIDO DESTRUIDA</div>
+  <div class="stats">Puntuación: <b id="final-score">0</b></div>
+  <div class="stats">Meteoritos destruidos: <b id="final-kills">0</b></div>
+  <div class="stats" id="new-record" style="color:var(--amarillo);display:none">🏆 ¡NUEVO RÉCORD!</div>
+  <br>
+  <button class="btn primary" id="restart-btn">🔄 Intentar de nuevo</button>
+  <button class="btn" id="over-menu-btn">🏠 Menú</button>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================
+   CONFIGURACIÓN Y ESTADO
+   ============================================================ */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+const G = {
+  state:'menu',        // menu | playing | paused | dying | over
+  score:0, kills:0, best:0,
+  time:0, spawnTimer:0, spawnInterval:1.5,
+  shake:0, flash:0, dyingTimer:0,
+  sound:true
+};
+try { G.best = parseInt(localStorage.getItem('md2d_best')||'0')||0; } catch(e){}
+
+const keys = {};
+let ship, missiles=[], meteors=[], particles=[], debris=[], rings=[], popups=[], stars=[];
+let bgCanvas = null;
+
+const rand = (a,b)=>a+Math.random()*(b-a);
+const dist = (a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const $ = id=>document.getElementById(id);
+
+/* ============================================================
+   AUDIO PROCEDURAL (Web Audio API, sin archivos)
+   ============================================================ */
+let audio = null;
+function initAudio(){
+  if(!audio){
+    try{ audio = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ return; }
+  }
+  if(audio.state==='suspended') audio.resume();
+}
+function tone(freq, endFreq, dur, type='sine', vol=.15){
+  if(!G.sound||!audio) return;
+  const o=audio.createOscillator(), g=audio.createGain(), t=audio.currentTime;
+  o.type=type;
+  o.frequency.setValueAtTime(freq,t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),t+dur);
+  g.gain.setValueAtTime(vol,t);
+  g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g); g.connect(audio.destination);
+  o.start(t); o.stop(t+dur);
+}
+function noise(dur, vol=.3, cutoff=1400){
+  if(!G.sound||!audio) return;
+  const n=Math.floor(audio.sampleRate*dur);
+  const buf=audio.createBuffer(1,n,audio.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+  const s=audio.createBufferSource(); s.buffer=buf;
+  const f=audio.createBiquadFilter(); f.type='lowpass';
+  f.frequency.setValueAtTime(cutoff,audio.currentTime);
+  f.frequency.exponentialRampToValueAtTime(80,audio.currentTime+dur);
+  const g=audio.createGain(); g.gain.value=vol;
+  s.connect(f); f.connect(g); g.connect(audio.destination);
+  s.start();
+}
+const sfx = {
+  shoot(){ tone(900,180,.16,'sawtooth',.09); noise(.08,.06,3000); },
+  hit(){ tone(500,120,.12,'square',.08); noise(.12,.15,2000); },
+  explode(big=false){
+    noise(big?.65:.4, big?.4:.28, big?1600:1200);
+    tone(big?90:130,25,.45,'sine',.25);
+  },
+  crash(){ noise(.9,.5,1800); tone(160,20,.8,'sawtooth',.2); },
+  click(){ tone(700,1000,.06,'square',.06); },
+  win(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,f,.2,'sine',.12),i*100)); }
+};
+
+/* ============================================================
+   FONDO REALISTA: NEBULOSA + PLANETA (precalculado)
+   ============================================================ */
+function buildBackground(){
+  bgCanvas=document.createElement('canvas');
+  bgCanvas.width=W*DPR; bgCanvas.height=H*DPR;
+  const b=bgCanvas.getContext('2d');
+  b.scale(DPR,DPR);
+
+  // Espacio profundo
+  b.fillStyle='#02040c'; b.fillRect(0,0,W,H);
+
+  // Nebulosas suaves con capas
+  const cols=['70,40,120','30,90,140','120,40,80','20,100,110'];
+  for(let i=0;i<7;i++){
+    const x=rand(0,W), y=rand(0,H), r=rand(H*.25,H*.7);
+    const g=b.createRadialGradient(x,y,0,x,y,r);
+    const c=cols[i%cols.length];
+    g.addColorStop(0,⁠ rgba(${c},.16) ⁠);
+    g.addColorStop(.5,⁠ rgba(${c},.05) ⁠);
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    b.fillStyle=g; b.fillRect(0,0,W,H);
+  }
+  // Polvo estelar fino
+  for(let i=0;i<400;i++){
+    b.fillStyle=⁠ rgba(200,220,255,${rand(.03,.12)}) ⁠;
+    b.fillRect(rand(0,W),rand(0,H),1,1);
+  }
+
+  // Planeta lejano con anillos y terminador (lado en sombra)
+  const px=W*.80, py=H*.22, pr=Math.min(W,H)*.10;
+  // Anillo trasero
+  b.save(); b.translate(px,py); b.rotate(-.35);
+  b.strokeStyle='rgba(180,160,130,.25)'; b.lineWidth=pr*.22;
+  b.beginPath(); b.ellipse(0,0,pr*1.9,pr*.5,0,Math.PI,Math.PI*2); b.stroke();
+  b.restore();
+  // Esfera
+  const pg=b.createRadialGradient(px-pr*.45,py-pr*.45,pr*.1,px,py,pr);
+  pg.addColorStop(0,'#8a7a66'); pg.addColorStop(.5,'#5a4f44'); pg.addColorStop(1,'#0a0d16');
+  b.fillStyle=pg; b.beginPath(); b.arc(px,py,pr,0,Math.PI*2); b.fill();
+  // Bandas atmosféricas
+  b.save(); b.beginPath(); b.arc(px,py,pr,0,Math.PI*2); b.clip();
+  for(let i=-4;i<=4;i++){
+    b.fillStyle=⁠ rgba(210,190,150,${rand(.04,.12)}) ⁠;
+    b.fillRect(px-pr,py+i*pr*.22,pr*2,pr*.10);
+  }
+  // Sombra del terminador
+  const sh=b.createLinearGradient(px-pr,0,px+pr,0);
+  sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,0,.85)');
+  b.fillStyle=sh; b.fillRect(px-pr,py-pr,pr*2,pr*2);
+  b.restore();
+  // Anillo delantero
+  b.save(); b.translate(px,py); b.rotate(-.35);
+  b.strokeStyle='rgba(200,180,150,.35)'; b.lineWidth=pr*.20;
+  b.beginPath(); b.ellipse(0,0,pr*1.9,pr*.5,0,0,Math.PI); b.stroke();
+  b.restore();
+
+  // Luna pequeña
+  const mx=W*.12,my=H*.16,mr=Math.min(W,H)*.025;
+  const mg=b.createRadialGradient(mx-mr*.4,my-mr*.4,1,mx,my,mr);
+  mg.addColorStop(0,'#9aa3ad'); mg.addColorStop(1,'#10151f');
+  b.fillStyle=mg; b.beginPath(); b.arc(mx,my,mr,0,Math.PI*2); b.fill();
+}
+
+function buildStars(){
+  stars=[];
+  for(let i=0;i<220;i++){
+    const z=rand(.2,1);
+    stars.push({x:rand(0,W),y:rand(0,H),z,r:rand(.4,1.6)*z,
+      c:Math.random()<.15?'255,200,150':Math.random()<.3?'160,200,255':'255,255,255',
+      tw:rand(0,Math.PI*2)});
+  }
+}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  buildBackground(); buildStars();
+  if(ship){ ship.x=Math.min(Math.max(ship.x,30),W-30); ship.y=Math.min(ship.y,H-60); }
+}
+window.addEventListener('resize',resize);
+resize();
+
+/* ============================================================
+   NAVE
+   ============================================================ */
+function resetShip(){
+  ship={x:W/2,y:H-110,vx:0,vy:0,cool:0,dead:false,inv:1.5,flame:0};
+}
+resetShip();
+
+function drawShip(){
+  if(ship.dead) return;
+  ctx.save();
+  ctx.translate(ship.x,ship.y);
+  // Inclinación al moverse lateralmente
+  ctx.rotate(ship.vx*.00045);
+  if(ship.inv>0 && Math.floor(ship.inv*12)%2===0) ctx.globalAlpha=.45;
+
+  const t=performance.now()/1000;
+  const fl=26+Math.sin(t*45)8+Math.abs(ship.vy).05;
+
+  // Llamas de los dos motores
+  for(const ex of [-7,7]){
+    const fg=ctx.createLinearGradient(ex,18,ex,20+fl);
+    fg.addColorStop(0,'rgba(255,255,220,.95)');
+    fg.addColorStop(.3,'rgba(255,170,40,.85)');
+    fg.addColorStop(1,'rgba(255,60,0,0)');
+    ctx.fillStyle=fg;
+    ctx.beginPath(); ctx.moveTo(ex-4,18); ctx.lineTo(ex+4,18);
+    ctx.lineTo(ex+1,20+fl); ctx.lineTo(ex-1,20+fl); ctx.closePath(); ctx.fill();
+  }
+
+  // Alas
+  const wg=ctx.createLinearGradient(-30,0,30,0);
+  wg.addColorStop(0,'#5a6b80'); wg.addColorStop(.5,'#aebfd0'); wg.addColorStop(1,'#5a6b80');
+  ctx.fillStyle=wg; ctx.strokeStyle='#2a3a50'; ctx.lineWidth=1.5;
+  for(const s of [-1,1]){
+    ctx.beginPath();
+    ctx.moveTo(s*7,-4); ctx.lineTo(s*29,16); ctx.lineTo(s*27,25);
+    ctx.lineTo(s*8,17); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Luz de punta de ala
+    ctx.fillStyle=s<0?'#ff6b6b':'#4ecdc4';
+    ctx.beginPath(); ctx.arc(s*27,20,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=wg;
+  }
+
+  // Fuselaje metálico
+  const hg=ctx.createLinearGradient(-10,0,10,0);
+  hg.addColorStop(0,'#7d8fa5'); hg.addColorStop(.4,'#e6eef5');
+  hg.addColorStop(.6,'#c3d1de'); hg.addColorStop(1,'#65788f');
+  ctx.fillStyle=hg; ctx.strokeStyle='#26364a';
+  ctx.beginPath();
+  ctx.moveTo(0,-30); ctx.quadraticCurveTo(9,-14,9,8);
+  ctx.lineTo(7,20); ctx.lineTo(-7,20); ctx.lineTo(-9,8);
+  ctx.quadraticCurveTo(-9,-14,0,-30); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Nariz coral
+  ctx.fillStyle='#ff6b6b';
+  ctx.beginPath(); ctx.moveTo(0,-30); ctx.quadraticCurveTo(5,-22,5,-16);
+  ctx.lineTo(-5,-16); ctx.quadraticCurveTo(-5,-22,0,-30); ctx.fill();
+
+  // Cabina de cristal
+  const cg=ctx.createRadialGradient(-2,-9,1,0,-7,9);
+  cg.addColorStop(0,'#c9f4ff'); cg.addColorStop(.5,'#3fa8d4'); cg.addColorStop(1,'#0a2a4a');
+  ctx.fillStyle=cg;
+  ctx.beginPath(); ctx.ellipse(0,-7,4.5,9,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#20344a'; ctx.stroke();
+
+  // Detalles / remaches
+  ctx.fillStyle='rgba(30,45,65,.6)';
+  for(const y of [2,8,14]){ ctx.beginPath(); ctx.arc(0,y,1,0,Math.PI*2); ctx.fill(); }
+
+  // Pods de misiles
+  ctx.fillStyle='#394b60';
+  for(const s of [-1,1]){
+    ctx.fillRect(s*12-2,2,4,12);
+    ctx.fillStyle='#ffd93d';
+    ctx.beginPath(); ctx.arc(s*12,2,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#394b60';
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   MISILES
+   ============================================================ */
+function shoot(){
+  if(ship.dead||ship.cool>0) return;
+  ship.cool=.22;
+  sfx.shoot();
+  for(const s of [-1,1]){
+    missiles.push({x:ship.x+s*12,y:ship.y-14,vy:-620,vx:s*8,
+      trail:[],life:0});
+  }
+}
+function drawMissile(m){
+  // Estela de humo / fuego
+  for(let i=1;i<m.trail.length;i++){
+    const p=m.trail[i-1], q=m.trail[i];
+    ctx.strokeStyle=⁠ rgba(255,${140+i*3},60,${(1-i/m.trail.length)*.5}) ⁠;
+    ctx.lineWidth=Math.max(1,5-i*.35);
+    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+  }
+  ctx.save(); ctx.translate(m.x,m.y);
+  const g=ctx.createLinearGradient(-3,0,3,0);
+  g.addColorStop(0,'#8a97a5'); g.addColorStop(.5,'#f0f4f8'); g.addColorStop(1,'#6a7785');
+  ctx.fillStyle=g; ctx.fillRect(-2,-7,4,14);
+  ctx.fillStyle='#ff6b6b';
+  ctx.beginPath(); ctx.moveTo(-2,-7); ctx.lineTo(0,-13); ctx.lineTo(2,-7); ctx.fill();
+  ctx.fillStyle='#394b60';
+  ctx.fillRect(-5,4,3,4); ctx.fillRect(2,4,3,4);
+  // Llama
+  ctx.fillStyle='rgba(255,190,60,.9)';
+  ctx.beginPath(); ctx.moveTo(-2,7); ctx.lineTo(0,16+Math.random()*6); ctx.lineTo(2,7); ctx.fill();
+  ctx.restore();
+}
+
+/* ============================================================
+   METEORITOS: forma irregular, cráteres y tipos
+   ============================================================ */
+function spawnMeteor(){
+  const big=Math.random()<.25;
+  const r=big?rand(30,46):rand(14,28);
+  const type=Math.random();
+  const verts=[];
+  const n=11;
+  for(let i=0;i<n;i++){
+    const a=i/n*Math.PI*2;
+    const rr=r*rand(.76,1.12);
+    verts.push({x:Math.cos(a)*rr,y:Math.sin(a)*rr});
+  }
+  const craters=[];
+  for(let i=0;i<5;i++){
+    const a=rand(0,Math.PI*2), d=rand(0,r*.6);
+    craters.push({x:Math.cos(a)d,y:Math.sin(a)*d,r:rand(r.1,r*.24)});
+  }
+  const speed=rand(65,120)+G.time*1.6;
+  meteors.push({
+    x:rand(40,W-40),y:-r-20,r,verts,craters,
+    vx:rand(-25,25),vy:Math.min(speed,260),
+    rot:rand(0,Math.PI*2),spin:rand(-1,1),
+    hp:big?3:1, maxHp:big?3:1, hit:0,
+    palette:type<.6?['#a08a70','#5a4a3a','#2a2018']:
+            type<.85?['#9fb8c9','#546a7d','#243242']:['#b0a58f','#6a6050','#302a20']
+  });
+}
+
+function drawMeteor(m){
+  ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.rot);
+  const p=m.palette;
+  const g=ctx.createRadialGradient(-m.r*.4,-m.r*.4,m.r*.1,0,0,m.r*1.2);
+  g.addColorStop(0,m.hit>0?'#ffffff':p[0]);
+  g.addColorStop(.55,p[1]); g.addColorStop(1,p[2]);
+  ctx.fillStyle=g; ctx.strokeStyle=p[2]; ctx.lineWidth=2;
+  ctx.beginPath();
+  m.verts.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Cráteres con sombra y borde iluminado
+  m.craters.forEach(c=>{
+    ctx.fillStyle='rgba(0,0,0,.35)';
+    ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r,c.r*.8,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(c.x,c.y,c.r,.6,2.4); ctx.stroke();
+  });
+  // Grietas si está dañado
+  if(m.hp<m.maxHp){
+    ctx.strokeStyle='rgba(255,120,40,.8)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-m.r*.5,-m.r*.2);
+    ctx.lineTo(-m.r*.1,m.r*.1); ctx.lineTo(m.r*.3,-m.r*.3);
+    ctx.lineTo(m.r*.6,m.r*.2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   EXPLOSIONES: chispas, humo, anillo y FRAGMENTOS SÓLIDOS
+   ============================================================ */
+function explode(x,y,r,big=false){
+  sfx.explode(big);
+  G.shake=Math.max(G.shake,big?16:7);
+  G.flash=Math.max(G.flash,big?.25:.1);
+
+  // Anillo de choque
+  rings.push({x,y,r:r*.5,max:r*4,life:1});
+
+  // Chispas
+  for(let i=0;i<(big?45:26);i++){
+    const a=rand(0,Math.PI*2), s=rand(60,320);
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:rand(.3,.9),max:.9,size:rand(1,3.5),
+      c:Math.random()<.5?'255,190,60':'255,100,40'});
+  }
+  // Humo
+  for(let i=0;i<10;i++){
+    const a=rand(0,Math.PI*2), s=rand(15,60);
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:rand(.8,1.6),max:1.6,size:rand(8,20),smoke:true,c:'120,110,100'});
+  }
+  // Fragmentos de roca que se separan y giran
+  const n=big?12:8;
+  for(let i=0;i<n;i++){
+    const a=rand(0,Math.PI*2), s=rand(50,190);
+    const size=rand(r*.15,r*.38);
+    debris.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,
+      rot:rand(0,6.28),vr:rand(-5,5),size,life:rand(1,1.8),max:1.8,
+      pts:[{x:-size,y:-size*.4},{x:size*.6,y:-size},{x:size,y:size*.5},{x:-size*.3,y:size}]});
+  }
+}
+
+function popup(x,y,text,color='#ffd93d'){
+  popups.push({x,y,text,color,life:1.2});
+}
+
+/* ============================================================
+   BUCLE DE SIMULACIÓN
+   ============================================================ */
+function update(dt){
+  G.time+=dt;
+  ship.cool=Math.max(0,ship.cool-dt);
+  ship.inv=Math.max(0,ship.inv-dt);
+  ship.flame+=dt;
+
+  // Movimiento con flechas (o WASD)
+  const ax=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
+  const ay=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+  const speed=340;
+  ship.vx+=(ax*speed-ship.vx)*Math.min(1,dt*12);
+  ship.vy+=(ay*speed*.8-ship.vy)*Math.min(1,dt*12);
+  ship.x=Math.max(32,Math.min(W-32,ship.x+ship.vx*dt));
+  ship.y=Math.max(60,Math.min(H-55,ship.y+ship.vy*dt));
+
+  if(keys.Space) shoot();
+
+  // Partículas del motor
+  if(Math.random()<.6){
+    particles.push({x:ship.x+rand(-8,8),y:ship.y+20,vx:rand(-15,15),vy:rand(60,140),
+      life:.35,max:.35,size:rand(1,3),c:'255,150,50'});
+  }
+
+  // Dificultad progresiva
+  G.spawnInterval=Math.max(.35,1.5-G.time*.012);
+  G.spawnTimer-=dt;
+  if(G.spawnTimer<=0){ G.spawnTimer=G.spawnInterval*rand(.7,1.3); spawnMeteor(); }
+
+  // Misiles
+  for(let i=missiles.length-1;i>=0;i--){
+    const m=missiles[i];
+    m.trail.unshift({x:m.x,y:m.y});
+    if(m.trail.length>16) m.trail.pop();
+    m.x+=m.vx*dt; m.y+=m.vy*dt; m.life+=dt;
+    if(m.y<-40||m.x<-20||m.x>W+20) missiles.splice(i,1);
+  }
+
+  // Meteoritos
+  for(let i=meteors.length-1;i>=0;i--){
+    const m=meteors[i];
+    m.x+=m.vx*dt; m.y+=m.vy*dt; m.rot+=m.spin*dt;
+    m.hit=Math.max(0,m.hit-dt);
+    if(m.x<m.r||m.x>W-m.r) m.vx*=-1;
+
+    // Impacto contra nave
+    if(!ship.dead && ship.inv<=0 && dist(m,ship)<m.r*.85+16){
+      explode(ship.x,ship.y,40,true);
+      explode(m.x,m.y,m.r);
+      ship.dead=true;
+      sfx.crash();
+      G.state='dying'; G.dyingTimer=1.1;
+      meteors.splice(i,1);
+      continue;
+    }
+    if(m.y>H+m.r+30){ meteors.splice(i,1); continue; }
+
+    // Colisión misil-meteorito
+    for(let j=missiles.length-1;j>=0;j--){
+      if(dist(m,missiles[j])<m.r+6){
+        missiles.splice(j,1);
+        m.hp--; m.hit=.12;
+        if(m.hp<=0){
+          explode(m.x,m.y,m.r,m.r>28);
+          const pts=Math.round(m.r*4);
+          G.score+=pts; G.kills++;
+          popup(m.x,m.y,'+'+pts);
+          // Sonido extra de victoria al superar 10 bajas
+          if(G.kills===10) sfx.win();
+          meteors.splice(i,1);
+        }else{
+          sfx.hit();
+          for(let k=0;k<8;k++){
+            const a=rand(0,6.28);
+            particles.push({x:m.x,y:m.y,vx:Math.cos(a)*150,vy:Math.sin(a)*150,
+              life:.3,max:.3,size:2,c:'255,220,150'});
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // Partículas
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx*dt; p.y+=p.vy*dt;
+    p.vx*=.97; p.vy*=.97;
+    if(p.smoke) p.size+=dt*14;
+    p.life-=dt;
+    if(p.life<=0) particles.splice(i,1);
+  }
+  // Fragmentos sólidos
+  for(let i=debris.length-1;i>=0;i--){
+    const d=debris[i];
+    d.x+=d.vx*dt; d.y+=d.vy*dt; d.vy+=40*dt;
+    d.rot+=d.vr*dt; d.life-=dt;
+    if(d.life<=0) debris.splice(i,1);
+  }
+  for(let i=rings.length-1;i>=0;i--){
+    const r=rings[i]; r.r+=(r.max-r.r)*dt*6; r.life-=dt*2.2;
+    if(r.life<=0) rings.splice(i,1);
+  }
+  for(let i=popups.length-1;i>=0;i--){
+    const p=popups[i]; p.y-=40*dt; p.life-=dt;
+    if(p.life<=0) popups.splice(i,1);
+  }
+  G.shake*=Math.pow(.02,dt);
+  G.flash*=Math.pow(.001,dt);
+
+  // Estrellas con parallax
+  stars.forEach(s=>{
+    s.y+=(18+s.z*60)*dt;
+    if(s.y>H){ s.y=-2; s.x=rand(0,W); }
+  });
+}
+
+/* ============================================================
+   RENDERIZADO
+   ============================================================ */
+function render(){
+  ctx.save();
+  if(G.shake>.3) ctx.translate(rand(-G.shake,G.shake),rand(-G.shake,G.shake));
+
+  ctx.drawImage(bgCanvas,0,0,W,H);
+
+  // Estrellas con parpadeo
+  const t=performance.now()/1000;
+  stars.forEach(s=>{
+    const a=(.4+.6*Math.abs(Math.sin(t*1.5+s.tw)))*s.z;
+    ctx.fillStyle=⁠ rgba(${s.c},${a}) ⁠;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  });
+
+  // Anillos de choque
+  rings.forEach(r=>{
+    ctx.strokeStyle=⁠ rgba(255,200,120,${Math.max(0,r.life)*.7}) ⁠;
+    ctx.lineWidth=2+r.life*3;
+    ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,Math.PI*2); ctx.stroke();
+  });
+
+  // Humo y chispas
+  particles.forEach(p=>{
+    const a=Math.max(0,p.life/p.max);
+    ctx.fillStyle=p.smoke?⁠ rgba(${p.c},${a*.25}) ⁠:⁠ rgba(${p.c},${a}) ⁠;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*(p.smoke?1:a*.6+.4),0,Math.PI*2); ctx.fill();
+  });
+
+  meteors.forEach(drawMeteor);
+  missiles.forEach(drawMissile);
+  drawShip();
+
+  // Fragmentos de roca rotando
+  debris.forEach(d=>{
+    ctx.save(); ctx.translate(d.x,d.y); ctx.rotate(d.rot);
+    ctx.globalAlpha=Math.max(0,d.life/d.max);
+    ctx.fillStyle='#6a5a48'; ctx.strokeStyle='#2a2018'; ctx.lineWidth=1;
+    ctx.beginPath();
+    d.pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+
+  // Puntuaciones flotantes
+  popups.forEach(p=>{
+    ctx.globalAlpha=Math.max(0,p.life/1.2);
+    ctx.fillStyle=p.color; ctx.font='bold 18px Consolas,monospace';
+    ctx.textAlign='center'; ctx.fillText(p.text,p.x,p.y);
+    ctx.globalAlpha=1;
+  });
+
+  if(G.flash>.01){
+    ctx.fillStyle=⁠ rgba(255,220,180,${G.flash}) ⁠;
+    ctx.fillRect(0,0,W,H);
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   CONTROL DEL JUEGO
+   ============================================================ */
+function updateHUD(){
+  $('score').textContent=G.score;
+  $('kills').textContent=G.kills;
+  $('best').textContent=G.best;
+}
+function startGame(){
+  initAudio(); sfx.click();
+  G.state='playing'; G.score=0; G.kills=0; G.time=0;
+  G.spawnTimer=.6; G.shake=0; G.flash=0;
+  missiles=[]; meteors=[]; particles=[]; debris=[]; rings=[]; popups=[];
+  resetShip(); updateHUD();
+  $('start-screen').classList.add('hidden');
+  $('over-screen').classList.add('hidden');
+  $('pause-screen').classList.add('hidden');
+}
+function gameOver(){
+  G.state='over';
+  const record=G.score>G.best;
+  if(record){
+    G.best=G.score;
+    try{ localStorage.setItem('md2d_best',G.best); }catch(e){}
+  }
+  $('final-score').textContent=G.score;
+  $('final-kills').textContent=G.kills;
+  $('new-record').style.display=record?'block':'none';
+  updateHUD();
+  $('over-screen').classList.remove('hidden');
+}
+function togglePause(){
+  if(G.state==='playing'){
+    G.state='paused'; $('pause-screen').classList.remove('hidden');
+  }else if(G.state==='paused'){
+    G.state='playing'; $('pause-screen').classList.add('hidden');
+  }
+}
+function toMenu(){
+  G.state='menu';
+  $('over-screen').classList.add('hidden');
+  $('pause-screen').classList.add('hidden');
+  $('start-screen').classList.remove('hidden');
+  missiles=[]; meteors=[]; particles=[]; debris=[]; rings=[]; popups=[];
+  resetShip();
+}
+
+/* ============================================================
+   ENTRADA: TECLADO, BOTONES Y TÁCTIL
+   ============================================================ */
+window.addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  keys[e.code]=true;
+  if(e.code==='KeyP'||e.code==='Escape'){ initAudio(); togglePause(); }
+  if(e.code==='Enter'){
+    if(G.state==='menu'||G.state==='over') startGame();
+  }
+  if(e.code==='Space') initAudio();
+});
+window.addEventListener('keyup',e=>{ keys[e.code]=false; });
+window.addEventListener('blur',()=>{
+  for(const k in keys) keys[k]=false;
+  if(G.state==='playing') togglePause();
+});
+
+$('start-btn').onclick=startGame;
+$('restart-btn').onclick=startGame;
+$('pause-btn').onclick=()=>{initAudio();togglePause();};
+$('resume-btn').onclick=()=>{sfx.click();togglePause();};
+$('pause-menu-btn').onclick=()=>{sfx.click();toMenu();};
+$('over-menu-btn').onclick=()=>{sfx.click();toMenu();};
+$('sound-btn').onclick=()=>{
+  initAudio(); G.sound=!G.sound;
+  $('sound-btn').textContent=G.sound?'🔊':'🔇';
+  if(G.sound) sfx.click();
+};
+
+// Botones táctiles
+document.querySelectorAll('.tbtn[data-k]').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{e.preventDefault();keys[b.dataset.k]=true;});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>
+    b.addEventListener(ev,()=>{keys[b.dataset.k]=false;}));
+});
+$('fire-btn').addEventListener('pointerdown',e=>{e.preventDefault();initAudio();keys.Space=true;});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>
+  $('fire-btn').addEventListener(ev,()=>{keys.Space=false;}));
+
+// Arrastrar la nave con el dedo / ratón en la zona de juego
+let dragging=false;
+canvas.addEventListener('pointerdown',e=>{
+  if(G.state!=='playing') return;
+  dragging=true; initAudio();
+  ship.x=e.clientX; ship.y=Math.max(60,Math.min(H-55,e.clientY-40));
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!dragging||G.state!=='playing') return;
+  const dx=e.clientX-ship.x;
+  ship.vx=dx*8;
+  ship.x=Math.max(32,Math.min(W-32,e.clientX));
+  ship.y=Math.max(60,Math.min(H-55,e.clientY-40));
+});
+['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,()=>{dragging=false;}));
+
+/* ============================================================
+   BUCLE PRINCIPAL
+   ============================================================ */
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,.033);
+  last=now;
+
+  if(G.state==='playing'){
+    update(dt);
+  }else if(G.state==='dying'){
+    // Sólo partículas: la nave ya está destruida
+    G.dyingTimer-=dt;
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt;
+      p.vx*=.97; p.vy*=.97; p.life-=dt;
+      if(p.life<=0) particles.splice(i,1);
+    }
+    for(let i=debris.length-1;i>=0;i--){
+      const d=debris[i]; d.x+=d.vx*dt; d.y+=d.vy*dt; d.vy+=40*dt;
+      d.rot+=d.vr*dt; d.life-=dt;
+      if(d.life<=0) debris.splice(i,1);
+    }
+    for(let i=rings.length-1;i>=0;i--){
+      const r=rings[i]; r.r+=(r.max-r.r)*dt*6; r.life-=dt*2.2;
+      if(r.life<=0) rings.splice(i,1);
+    }
+    G.shake*=Math.pow(.02,dt); G.flash*=Math.pow(.001,dt);
+    if(G.dyingTimer<=0) gameOver();
+  }
+
+  if(G.state!=='paused') render();
+  requestAnimationFrame(loop);
+}
+updateHUD();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
